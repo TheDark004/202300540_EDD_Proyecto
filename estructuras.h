@@ -19,6 +19,7 @@ public:
     int pesoMaxDespegue; // Peso máximo en kg
     string aerolinea;
     string estado; // "Disponible" o "Mantenimiento"
+    string ciudadDestino;
 
     // CONSTRUCTOR
     Avion()
@@ -32,6 +33,7 @@ public:
         pesoMaxDespegue = 0;
         aerolinea = "";
         estado = "Disponible";
+        ciudadDestino = "";
     }
 };
 
@@ -64,21 +66,24 @@ public:
 class Piloto
 {
 public:
-    string id; // ID único del piloto
+    string id; // numero_de_id del JSON
     string nombre;
     string nacionalidad;
-    string numeroLicencia;
-    int horasVuelo;      // Para ordenar en ABB
-    string tipoLicencia; // Comercial, Privado, etc.
+    string vuelo;        // Vuelo asignado
+    int horasVuelo;      
+    string tipoLicencia; 
+    
 
     Piloto()
     {
-        id = "";
+        
         nombre = "";
         nacionalidad = "";
-        numeroLicencia = "";
+        id = "";
+        vuelo = "";
         horasVuelo = 0;
         tipoLicencia = "";
+       
     }
 };
 
@@ -234,7 +239,7 @@ public:
     }
 };
 
-// NODOS PARA GRAFO 
+// NODOS PARA GRAFO
 
 class Arista
 {
@@ -254,9 +259,9 @@ public:
 class NodoGrafo
 {
 public:
-    string ciudad;          // Nombre de la ciudad (vértice)
-    Arista *adyacentes;     // Lista de aristas 
-    NodoGrafo *siguiente;   // Siguiente nodo en la lista de vértices
+    string ciudad;        // Nombre de la ciudad (vértice)
+    Arista *adyacentes;   // Lista de aristas
+    NodoGrafo *siguiente; // Siguiente nodo en la lista de vértices
 
     NodoGrafo(string c)
     {
@@ -268,15 +273,14 @@ public:
 
 // NODOS PARA MATRIZ DISPERSA
 
-
 class NodoMatriz
 {
 public:
-    int fila;              // Índice de fila (piloto)
-    int columna;           // Índice de columna (ciudad)
-    string vuelo;          // Número de vuelo asignado
-    NodoMatriz *derecha;   // Siguiente nodo en la fila
-    NodoMatriz *abajo;     // Siguiente nodo en la columna
+    int fila;            // Índice de fila (piloto)
+    int columna;         // Índice de columna (ciudad)
+    string vuelo;        // Número de vuelo asignado
+    NodoMatriz *derecha; // Siguiente nodo en la fila
+    NodoMatriz *abajo;   // Siguiente nodo en la columna
 
     NodoMatriz(int f, int c, string v)
     {
@@ -293,9 +297,9 @@ class CabeceraFila
 {
 public:
     int indiceFila;
-    string idPiloto;           // ID del piloto
-    NodoMatriz *primero;       // Primer nodo de esta fila
-    CabeceraFila *siguiente;   // Siguiente cabecera de fila
+    string idPiloto;         // ID del piloto
+    NodoMatriz *primero;     // Primer nodo de esta fila
+    CabeceraFila *siguiente; // Siguiente cabecera de fila
 
     CabeceraFila(int idx, string id)
     {
@@ -311,8 +315,8 @@ class CabeceraColumna
 {
 public:
     int indiceColumna;
-    string ciudad;             // Nombre de la ciudad
-    NodoMatriz *primero;       // Primer nodo de esta columna
+    string ciudad;              // Nombre de la ciudad
+    NodoMatriz *primero;        // Primer nodo de esta columna
     CabeceraColumna *siguiente; // Siguiente cabecera de columna
 
     CabeceraColumna(int idx, string c)

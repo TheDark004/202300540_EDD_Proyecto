@@ -7,18 +7,56 @@
 
 using namespace std;
 
+/*
+   ÁRBOL BINARIO DE BÚSQUEDA (ABB)
+   - Almacena pilotos ordenados por HORAS DE VUELO
+   - Permite recorridos: preorden, inorden, postorden
+   - Soporta eliminación de pilotos (dar de baja)
+*/
+
 class ArbolBinarioBusqueda
 {
 private:
     NodoABB *raiz;
     ofstream archivo;
 
+    // MÉTODOS PRIVADOS (RECURSIVOS)
+    void generarDOTRecursivo(NodoABB *nodo, ofstream &archivo, int &contador)
+    {
+        if (nodo == nullptr)
+            return;
+
+        int idActual = contador++;
+
+        // Crear etiqueta del nodo
+        archivo << "    nodo" << idActual << " [label=\"";
+        archivo << nodo->dato->nombre << "\\n";
+        archivo << "ID: " << nodo->dato->id << "\\n";
+        archivo << "Horas: " << nodo->dato->horasVuelo << "\"];" << endl;
+
+        // Hijo izquierdo
+        if (nodo->izquierdo != nullptr)
+        {
+            int idIzquierdo = contador;
+            archivo << "    nodo" << idActual << " -> nodo" << idIzquierdo << ";" << endl;
+            generarDOTRecursivo(nodo->izquierdo, archivo, contador);
+        }
+
+        // Hijo derecho
+        if (nodo->derecho != nullptr)
+        {
+            int idDerecho = contador;
+            archivo << "    nodo" << idActual << " -> nodo" << idDerecho << ";" << endl;
+            generarDOTRecursivo(nodo->derecho, archivo, contador);
+        }
+    }
+
     // Inserta un piloto de forma recursiva
     NodoABB *insertarNodo(Piloto *piloto, NodoABB *nodoPtr)
     {
         if (nodoPtr == nullptr)
         {
-            // Crea nuevo nodo
+            // Crear nuevo nodo
             NodoABB *nuevo = new NodoABB(piloto);
             nodoPtr = nuevo;
             cout << "  → Piloto insertado: " << piloto->nombre
@@ -26,17 +64,17 @@ private:
         }
         else if (piloto->horasVuelo < nodoPtr->dato->horasVuelo)
         {
-            // Ir a la izquierda- menos horas
+            // Ir a la izquierda (menos horas)
             nodoPtr->izquierdo = insertarNodo(piloto, nodoPtr->izquierdo);
         }
         else if (piloto->horasVuelo > nodoPtr->dato->horasVuelo)
         {
-            // Ir a la derecha- mas horas
+            // Ir a la derecha (más horas)
             nodoPtr->derecho = insertarNodo(piloto, nodoPtr->derecho);
         }
         else
         {
-            // Mismo numero de horas - comparar por id para evitar duplicados
+            // Mismo número de horas - comparar por ID para evitar duplicados
             if (piloto->id < nodoPtr->dato->id)
             {
                 nodoPtr->izquierdo = insertarNodo(piloto, nodoPtr->izquierdo);
@@ -47,14 +85,14 @@ private:
             }
             else
             {
-                cout << " Piloto duplicado (ID: " << piloto->id << ")" << endl;
+                cout << "  Piloto duplicado (ID: " << piloto->id << ")" << endl;
             }
         }
 
         return nodoPtr;
     }
 
-    // Busca un piloto por id
+    // Busca un piloto por ID
     NodoABB *buscarNodo(string id, NodoABB *nodoPtr)
     {
         if (nodoPtr == nullptr)
@@ -67,7 +105,7 @@ private:
         }
         else
         {
-            // Buscar en ambos subárboles
+            // Buscar en ambos subárboles (porque ordenamos por horas, no por ID)
             NodoABB *resultado = buscarNodo(id, nodoPtr->izquierdo);
             if (resultado != nullptr)
             {
@@ -77,7 +115,7 @@ private:
         }
     }
 
-    // Encuentra el nodo con valor mínimo - mas a la izquierda
+    // Encuentra el nodo con valor mínimo (más a la izquierda)
     NodoABB *encontrarMinimo(NodoABB *nodo)
     {
         while (nodo->izquierdo != nullptr)
@@ -98,14 +136,14 @@ private:
         // Si encontramos el nodo
         if (id == nodoPtr->dato->id)
         {
-            //  Nodo sin hijos (hoja)
+            // Caso 1: Nodo sin hijos (hoja)
             if (nodoPtr->izquierdo == nullptr && nodoPtr->derecho == nullptr)
             {
                 delete nodoPtr->dato;
                 delete nodoPtr;
                 return nullptr;
             }
-            //  Nodo con un solo hijo (derecho)
+            // Caso 2: Nodo con un solo hijo (derecho)
             else if (nodoPtr->izquierdo == nullptr)
             {
                 NodoABB *temp = nodoPtr->derecho;
@@ -113,7 +151,7 @@ private:
                 delete nodoPtr;
                 return temp;
             }
-            //  Nodo con un solo hijo (izquierdo)
+            // Caso 3: Nodo con un solo hijo (izquierdo)
             else if (nodoPtr->derecho == nullptr)
             {
                 NodoABB *temp = nodoPtr->izquierdo;
@@ -121,10 +159,10 @@ private:
                 delete nodoPtr;
                 return temp;
             }
-            // Nodo con dos hijos
+            // Caso 4: Nodo con dos hijos
             else
             {
-                // Encontrar el sucesor
+                // Encontrar el sucesor (mínimo del subárbol derecho)
                 NodoABB *sucesor = encontrarMinimo(nodoPtr->derecho);
 
                 // Copiar datos del sucesor al nodo actual
@@ -147,6 +185,7 @@ private:
     }
 
     // RECORRIDOS
+
     void preorden(NodoABB *nodoPtr)
     {
         if (nodoPtr != nullptr)
@@ -184,6 +223,7 @@ private:
     }
 
     // GRAPHVIZ
+
     void imprimirNodos(NodoABB *nodoPtr)
     {
         if (nodoPtr == nullptr)
@@ -243,6 +283,8 @@ public:
         cout << "Árbol Binario destruido" << endl;
     }
 
+    // MÉTODOS PÚBLICOS
+
     bool estaVacio()
     {
         return (raiz == nullptr);
@@ -275,17 +317,17 @@ public:
         return nullptr;
     }
 
-    // Elimina un piloto por ID
+    // Elimina un piloto por ID (dar de baja)
     bool eliminar(string id)
     {
         if (buscar(id) == nullptr)
         {
-            cout << "Piloto no encontrado: " << id << endl;
+            cout << "   Piloto no encontrado: " << id << endl;
             return false;
         }
 
         raiz = eliminarNodo(id, raiz);
-        cout << " Piloto eliminado del ABB: " << id << endl;
+        cout << "   Piloto eliminado del ABB: " << id << endl;
         return true;
     }
 
@@ -293,9 +335,10 @@ public:
 
     void recorridoPreorden()
     {
-
+        cout << "\n"
+             << endl;
         cout << "    RECORRIDO PREORDEN (Raíz-Izq-Der)    " << endl;
-
+        cout << "" << endl;
         if (estaVacio())
         {
             cout << "  Árbol vacío" << endl;
@@ -309,9 +352,10 @@ public:
 
     void recorridoInorden()
     {
-
-        cout << "    RECORRIDO INORDEN (Izq-Raíz-Der)     " << endl;
-
+        cout << "\n"
+             << endl;
+        cout << "  RECORRIDO INORDEN (Izq-Raíz-Der)    " << endl;
+        cout << "" << endl;
         if (estaVacio())
         {
             cout << "  Árbol vacío" << endl;
@@ -325,7 +369,10 @@ public:
 
     void recorridoPostorden()
     {
+        cout << "\n"
+             << endl;
         cout << "   RECORRIDO POSTORDEN (Izq-Der-Raíz)    " << endl;
+        cout << " " << endl;
         if (estaVacio())
         {
             cout << "  Árbol vacío" << endl;
@@ -337,33 +384,40 @@ public:
         cout << endl;
     }
 
-    // GRAPHVIZ
+    // REPORTE GRAPHVIZ
+
     void generarReporte()
     {
         if (estaVacio())
         {
-            cout << "  El árbol está vacío" << endl;
+            cout << "   El árbol está vacío" << endl;
             return;
         }
 
-        archivo.open("grafica_abb_pilotos.dot", ios::out);
-        archivo << "digraph ABB {" << endl;
-        archivo << "    node [shape=circle, style=filled, fillcolor=lightblue];" << endl;
+        ofstream archivo("grafica_abb_pilotos.dot");
 
-        imprimirNodos(raiz);
+        archivo << "digraph ABB {" << endl;
+        archivo << "    node [shape=ellipse, style=filled, fillcolor=lightblue];" << endl;
+        archivo << "    edge [arrowhead=vee];" << endl;
+        archivo << endl;
+
+        archivo << "    titulo [label=\"Árbol Binario - Pilotos por Horas de Vuelo\", "
+                << "shape=plaintext, fontsize=16];" << endl;
+
+        // Generar nodos recursivamente
+        int contador = 0;
+        generarDOTRecursivo(raiz, archivo, contador);
 
         archivo << "}" << endl;
         archivo.close();
 
-        // Generar imagen con Graphviz
-        system("dot -Tpng grafica_abb_pilotos.dot -o grafica_abb_pilotos.png");
+        system("dot -Tpng grafica_abb_pilotos.dot -o grafica_abb_pilotos.png 2>nul");
 
-// Abrir imagen automáticamente
 #ifdef _WIN32
         system("start grafica_abb_pilotos.png");
 #endif
 
-        cout << "   Reporte generado: grafica_abb_pilotos.png" << endl;
+        cout << "    Reporte generado: grafica_abb_pilotos.png" << endl;
     }
 };
 

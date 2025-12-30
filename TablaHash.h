@@ -1,258 +1,408 @@
-#ifndef TABLA_HASH_H
-#define TABLA_HASH_H
+#ifndef TABLA_HASH_SIMPLE_H
+#define TABLA_HASH_SIMPLE_H
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include "estructuras.h"
-#include "ListaSimpleH.h"
 
 using namespace std;
 
-/*
-   - Tamaño: 19 (M = 19)
-   - Función de dispersión: h(llave) = llave % 19
-   - Manejo de colisiones: Encadenamiento (listas simples)
-   - Almacena pilotos por su ID
-*/
+// NODO SIMPLE PARA LA LISTA DE COLISIONES
+class NodoHashSimple
+{
+public:
+    string id;
+    string nombre;
+    int horasVuelo;
+    NodoHashSimple *siguiente;
 
+    NodoHashSimple(string i, string n, int h)
+    {
+        id = i;
+        nombre = n;
+        horasVuelo = h;
+        siguiente = nullptr;
+    }
+};
+
+// LISTA SIMPLE PARA COLISIONES
+class ListaHashSimple
+{
+public:
+    NodoHashSimple *primero;
+
+    ListaHashSimple()
+    {
+        primero = nullptr;
+    }
+
+    void insertar(string id, string nombre, int horas)
+    {
+        NodoHashSimple *nuevo = new NodoHashSimple(id, nombre, horas);
+
+        if (primero == nullptr)
+        {
+            primero = nuevo;
+        }
+        else
+        {
+            nuevo->siguiente = primero;
+            primero = nuevo;
+        }
+    }
+
+    bool eliminar(string id)
+    {
+        if (primero == nullptr)
+            return false;
+
+        if (primero->id == id)
+        {
+            NodoHashSimple *temp = primero;
+            primero = primero->siguiente;
+            delete temp;
+            return true;
+        }
+
+        NodoHashSimple *actual = primero;
+        while (actual->siguiente != nullptr)
+        {
+            if (actual->siguiente->id == id)
+            {
+                NodoHashSimple *temp = actual->siguiente;
+                actual->siguiente = temp->siguiente;
+                delete temp;
+                return true;
+            }
+            actual = actual->siguiente;
+        }
+        return false;
+    }
+
+    // Buscar y devolver el nodo completo
+    NodoHashSimple *buscarNodo(string id)
+    {
+        NodoHashSimple *actual = primero;
+        while (actual != nullptr)
+        {
+            if (actual->id == id)
+                return actual;
+            actual = actual->siguiente;
+        }
+        return nullptr;
+    }
+
+    bool existe(string id)
+    {
+        return (buscarNodo(id) != nullptr);
+    }
+
+    bool estaVacia()
+    {
+        return primero == nullptr;
+    }
+
+    ~ListaHashSimple()
+    {
+        while (primero != nullptr)
+        {
+            NodoHashSimple *temp = primero;
+            primero = primero->siguiente;
+            delete temp;
+        }
+    }
+};
+
+// TABLA HASH SIMPLE
 class TablaHash
 {
 private:
-    int tamTabla;        // Tamaño = 19
-    int numElementos;    // Cantidad de pilotos almacenados
-    ListaSimpleH *tabla; // Array de listas simples
+    int tamTabla;
+    int numElementos;
+    ListaHashSimple *tabla;
 
-    // Convierte el ID del piloto (string) a un número para la función hash
     int convertirIDaNumero(string id)
     {
         int suma = 0;
-        for (char c : id)
+        for (int i = 0; i < id.length(); i++)
         {
-            suma += (int)c; // Suma los valores ASCII
+            suma += (int)id[i];
         }
         return suma;
     }
 
 public:
-    // CONSTRUCTOR Y DESTRUCTOR
-
     TablaHash()
     {
-        tamTabla = 19; // Tamaño especificado en el proyecto
+        tamTabla = 19;
         numElementos = 0;
-        tabla = new ListaSimpleH[tamTabla];
-
-        cout << "Tabla Hash creada (Tamaño: " << tamTabla << ")" << endl;
+        tabla = new ListaHashSimple[tamTabla];
+        cout << " Tabla Hash creada (Tamaño: 19)" << endl;
     }
 
     ~TablaHash()
     {
         delete[] tabla;
-        cout << "Tabla Hash destruida" << endl;
+        cout << " Tabla Hash destruida" << endl;
     }
 
-    // FUNCIÓN HASH
-
-    // Calcula el índice usando h(llave) = llave % M
     int Clave(string id)
     {
         int valor = convertirIDaNumero(id);
-        int indice = valor % tamTabla;
-        return indice;
+        return valor % tamTabla;
     }
 
-    // MÉTODOS PRINCIPALES
-
-    // Inserta un piloto en la tabla
     void insertar(Piloto *piloto)
     {
-        if (piloto == nullptr)
-        {
-            cout << " Error: Piloto nulo" << endl;
+        if (piloto == nullptr || piloto->id.empty())
             return;
-        }
 
-        // Verificar si ya existe
-        if (buscar(piloto->id) != nullptr)
-        {
-            cout << " Piloto ya existe en tabla hash: " << piloto->id << endl;
-            return;
-        }
-
-        // Calcular índice
         int indice = Clave(piloto->id);
 
-        // Insertar en la lista correspondiente
-        tabla[indice].insertarFinal(piloto);
-        numElementos++;
+        if (tabla[indice].existe(piloto->id))
+        {
+            cout << "   Piloto ya existe en Hash: " << piloto->id << endl;
+            return;
+        }
 
-        cout << "  → Hash: ID=" << piloto->id
-             << " → Índice [" << indice << "]" << endl;
+        tabla[indice].insertar(piloto->id, piloto->nombre, piloto->horasVuelo);
+        numElementos++;
+        cout << "  → Hash: ID=" << piloto->id << " → Índice [" << indice << "]" << endl;
     }
 
-    // Busca un piloto por ID
+    // BUSCAR CORREGIDO: Devuelve piloto completo
     Piloto *buscar(string id)
     {
+        if (id.empty())
+            return nullptr;
+
         int indice = Clave(id);
-        return tabla[indice].buscar(id);
+        NodoHashSimple *nodo = tabla[indice].buscarNodo(id);
+
+        if (nodo != nullptr)
+        {
+            // Crear piloto con TODOS los datos
+            Piloto *temp = new Piloto();
+            temp->id = nodo->id;
+            temp->nombre = nodo->nombre;
+            temp->horasVuelo = nodo->horasVuelo;
+
+            return temp;
+        }
+        return nullptr;
     }
 
-    // Elimina un piloto por ID
+    // ELIMINAR mejorado
     bool eliminar(string id)
     {
+        if (id.empty())
+            return false;
+
         int indice = Clave(id);
+
+        // Verificar si existe antes de intentar eliminar
+        if (!tabla[indice].existe(id))
+        {
+            cout << "   Piloto no encontrado en Hash: " << id << endl;
+            return false;
+        }
 
         if (tabla[indice].eliminar(id))
         {
             numElementos--;
-            cout << "  Piloto eliminado de Tabla Hash: " << id << endl;
+            cout << "   Piloto eliminado de Tabla Hash: " << id << endl;
             return true;
         }
 
-        cout << "  Piloto no encontrado en Tabla Hash: " << id << endl;
+        cout << "   Error al eliminar de Hash: " << id << endl;
         return false;
     }
 
-    // Verifica si la tabla está vacía
     bool estaVacia()
     {
         return numElementos == 0;
     }
 
-    // Obtiene el número de elementos
     int getNumElementos()
     {
         return numElementos;
     }
 
-    // VISUALIZACIÓN
-
-    // Imprime la tabla completa en consola
     void imprimirTabla()
     {
-
-        cout << "        TABLA HASH DE PILOTOS              " << endl;
+        cout << "\n"
+             << endl;
+        cout << "         TABLA HASH DE PILOTOS              " << endl;
+        cout << "" << endl;
         cout << "  Tamaño: " << tamTabla << " | Elementos: " << numElementos << endl;
-        cout << "  Función: h(ID) = Σ(ASCII) % 19" << endl;
+        cout << "────────────────────────────────────────────" << endl;
 
         for (int i = 0; i < tamTabla; i++)
         {
             cout << "  [" << i << "] -> ";
-            tabla[i].visualizarLista();
+            if (tabla[i].estaVacia())
+            {
+                cout << "Vacío";
+            }
+            else
+            {
+                NodoHashSimple *actual = tabla[i].primero;
+                while (actual != nullptr)
+                {
+                    cout << "[" << actual->id << ": " << actual->nombre << "]";
+                    if (actual->siguiente != nullptr)
+                        cout << " -> ";
+                    actual = actual->siguiente;
+                }
+            }
             cout << endl;
         }
+        cout << "════════════════════════════════════════════\n"
+             << endl;
     }
-
-    // REPORTE GRAPHVIZ
 
     void generarReporte()
     {
-        ofstream archivo;
-        archivo.open("grafica_tabla_hash.dot", ios::out);
-
-        if (!archivo.is_open())
-        {
-            cout << "  Error al crear archivo DOT" << endl;
-            return;
-        }
+        ofstream archivo("grafica_tabla_hash.dot");
 
         archivo << "digraph TablaHash {" << endl;
-        archivo << "    rankdir=LR;" << endl;
-        archivo << "    node [shape=record];" << endl;
+        archivo << "    rankdir=TB;" << endl;
+        archivo << "    node [shape=box, style=filled, fontname=\"Arial\"];" << endl;
+        archivo << "    edge [arrowhead=vee];" << endl;
+        archivo << "    graph [nodesep=0.3, ranksep=0.5];" << endl;
         archivo << endl;
 
-        // Crear nodo de la tabla (índices)
-        archivo << "    tabla [label=\"";
+        // Título
+        archivo << "    titulo [label=\"TABLA HASH\\nTamaño: 19\\nPilotos por ID\", ";
+        archivo << "shape=plaintext, fontsize=16];" << endl;
+        archivo << endl;
+
+        // Crear ÍNDICES del 0 al 18 en ORDEN
+        archivo << "    // ===== ÍNDICES (0-18) ===== " << endl;
+
+        // Primero, crear todos los índices en orden
         for (int i = 0; i < tamTabla; i++)
         {
-            archivo << "<f" << i << "> " << i;
-            if (i < tamTabla - 1)
-            {
-                archivo << " | ";
-            }
+            archivo << "    idx" << i << " [label=\"Índice " << i << "\", ";
+            archivo << "fillcolor=lightyellow, width=1.2, height=0.5];" << endl;
         }
-        archivo << "\", shape=record, style=filled, fillcolor=lightgray];" << endl;
+
         archivo << endl;
 
-        // Crear nodos de las listas y conexiones
+        // Ahora, crear ELEMENTOS debajo de cada índice
+        archivo << "    // ===== ELEMENTOS ===== " << endl;
+
         for (int i = 0; i < tamTabla; i++)
         {
             if (!tabla[i].estaVacia())
             {
-                NodoHash *actual = tabla[i].getPrimero();
-                int contador = 0;
+                NodoHashSimple *actual = tabla[i].primero;
+                int cont = 0;
+                string anterior = "";
 
-                // Conectar desde la tabla al primer nodo
-                archivo << "    tabla:f" << i << " -> piloto_" << i << "_" << contador
-                        << " [color=blue];" << endl;
-
-                // Crear nodos de la lista
                 while (actual != nullptr)
                 {
-                    archivo << "    piloto_" << i << "_" << contador
-                            << " [label=\"{ID: " << actual->dato->id << " | "
-                            << actual->dato->nombre << " | Horas: "
-                            << actual->dato->horasVuelo << "}\", "
-                            << "style=filled, fillcolor=lightblue];" << endl;
+                    string nodoId = "elem_" + to_string(i) + "_" + to_string(cont);
 
-                    // Conectar con el siguiente
-                    if (actual->siguiente != nullptr)
+                    // Crear nodo con solo el ID
+                    archivo << "    " << nodoId << " [label=\"" << actual->id << "\", ";
+                    archivo << "fillcolor=lightblue, width=1.0];" << endl;
+
+                    // Conectar con índice (si es el primero)
+                    if (cont == 0)
                     {
-                        archivo << "    piloto_" << i << "_" << contador
-                                << " -> piloto_" << i << "_" << (contador + 1)
-                                << " [color=green];" << endl;
+                        archivo << "    idx" << i << " -> " << nodoId << ";" << endl;
+                    }
+                    // Conectar con elemento anterior (si hay)
+                    else if (!anterior.empty())
+                    {
+                        archivo << "    " << anterior << " -> " << nodoId << ";" << endl;
                     }
 
+                    anterior = nodoId;
                     actual = actual->siguiente;
-                    contador++;
+                    cont++;
                 }
 
-                archivo << endl;
+                // Mostrar cuántos elementos tiene este índice
+                archivo << "    // Índice " << i << " tiene " << cont << " elemento(s)" << endl;
             }
+            else
+            {
+                // Índice vacío
+                archivo << "    vacio" << i << " [label=\"Vacío\", ";
+                archivo << "fillcolor=white, style=dashed, width=0.8];" << endl;
+                archivo << "    idx" << i << " -> vacio" << i << " [style=dashed, color=gray];" << endl;
+            }
+
+            archivo << endl;
+        }
+
+        // ORDEN VERTICAL 
+        archivo << "    // ORDENAR ÍNDICES " << endl;
+
+        // Agrupar todos los índices al mismo nivel
+        archivo << "    { rank=same; titulo; }" << endl;
+
+        // Índices en el siguiente nivel, en orden
+        archivo << "    { rank=same; ";
+        for (int i = 0; i < tamTabla; i++)
+        {
+            archivo << "idx" << i;
+            if (i < tamTabla - 1)
+                archivo << "; ";
+        }
+        archivo << " }" << endl;
+
+        // Forzar orden con conexiones invisibles
+        for (int i = 0; i < tamTabla - 1; i++)
+        {
+            archivo << "    idx" << i << " -> idx" << (i + 1) << " [style=invis, weight=100];" << endl;
         }
 
         archivo << "}" << endl;
         archivo.close();
 
-        // Generar imagen con Graphviz
-        system("dot -Tpng grafica_tabla_hash.dot -o grafica_tabla_hash.png");
+        cout << "   Reporte de tabla hash generado" << endl;
+        cout << "  Total índices: " << tamTabla << endl;
+        cout << "  Elementos cargados: " << numElementos << endl;
 
-// Abrir imagen automáticamente
-#ifdef _WIN32
-        system("start grafica_tabla_hash.png");
-#endif
+        //  Generar PNG
+        cout << "  Generando imagen PNG..." << endl;
+        int genResult = system("dot -Tpng grafica_tabla_hash.dot -o grafica_tabla_hash.png");
 
-        cout << "  Reporte generado: grafica_tabla_hash.png" << endl;
-    }
-
-    void mostrarEstadisticas()
-    {
-
-        cout << "     DATOS DE LA TABLA HASH          " << endl;
-
-        int espaciosOcupados = 0;
-        int maxColisiones = 0;
-
-        for (int i = 0; i < tamTabla; i++)
+        if (genResult != 0)
         {
-            int tam = tabla[i].getTamanio();
-            if (tam > 0)
-            {
-                espaciosOcupados++;
-                if (tam > maxColisiones)
-                {
-                    maxColisiones = tam;
-                }
-            }
+            cout << "  Error al generar la imagen" << endl;
+            return;
         }
 
-        float factorCarga = (float)numElementos / tamTabla;
+        //  Verificar que el archivo existe
+        ifstream testPNG("grafica_tabla_hash.png", ios::binary);
+        if (!testPNG.is_open())
+        {
+            cout << "   El archivo PNG no se creó" << endl;
+            return;
+        }
+        testPNG.close();
 
-        cout << "  Total de pilotos: " << numElementos << endl;
-        cout << "  Espacios ocupados: " << espaciosOcupados << "/" << tamTabla << endl;
-        cout << "  Factor de carga: " << factorCarga << endl;
-        cout << "  Maxima colision: " << maxColisiones << " pilotos en un indice" << endl;
+        //  ABRIR LA IMAGEN - MÉTODO QUE SIEMPRE FUNCIONA EN WINDOWS
+        cout << "  Abriendo imagen..." << endl;
+
+        //  Usar 'explorer' que siempre funciona
+        int openResult = system("explorer grafica_tabla_hash.png");
+
+        if (openResult == 0)
+        {
+            cout << "  Imagen abierta correctamente" << endl;
+        }
+        else
+        {
+            // Si explorer falla, usar PowerShell
+            system("powershell -Command \"& {Start-Process 'grafica_tabla_hash.png'}\"");
+            cout << "  Imagen enviada a abrir" << endl;
+        }
     }
 };
 

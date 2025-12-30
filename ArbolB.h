@@ -401,26 +401,32 @@ private:
     }
 
     // Genera código DOT recursivamente
-    void generarDOTRecursivo(NodoB *nodo, ofstream &archivo, int &contador)
+    void generarDOTRecursivo(NodoB *nodo, string &dot, int &contador)
     {
         if (nodo == nullptr)
             return;
 
         int idNodo = contador++;
 
-        // Generar etiqueta del nodo
-        archivo << "    nodo" << idNodo << " [label=\"";
+        // Crear etiqueta del nodo en formato record
+        dot += "    nodo" + to_string(idNodo) + " [label=\"";
 
         for (int i = 0; i < nodo->numClaves; i++)
         {
             if (i > 0)
-                archivo << " | ";
-            archivo << nodo->claves[i];
+                dot += "|";
+            dot += "<f" + to_string(i) + "> " + nodo->claves[i];
         }
 
-        archivo << "\"];\n";
+        // Agregar espacios para punteros hijos
+        for (int i = nodo->numClaves; i < NodoB::MAX_HIJOS; i++)
+        {
+            dot += "|<f" + to_string(i) + "> ";
+        }
 
-        // Generar conexiones con hijos
+        dot += "\"];\n";
+
+        // Conexiones con hijos
         if (!nodo->esHoja)
         {
             for (int i = 0; i <= nodo->numClaves; i++)
@@ -428,8 +434,8 @@ private:
                 if (nodo->hijos[i] != nullptr)
                 {
                     int idHijo = contador;
-                    archivo << "    nodo" << idNodo << " -> nodo" << idHijo << ";\n";
-                    generarDOTRecursivo(nodo->hijos[i], archivo, contador);
+                    dot += "    nodo" + to_string(idNodo) + ":f" + to_string(i) + " -> nodo" + to_string(idHijo) + ";\n";
+                    generarDOTRecursivo(nodo->hijos[i], dot, contador);
                 }
             }
         }
@@ -459,7 +465,6 @@ private:
     }
 
 public:
-
     // CONSTRUCTOR Y DESTRUCTOR
     ArbolB()
     {
@@ -473,9 +478,8 @@ public:
         cout << "Árbol B destruido" << endl;
     }
 
-   
     // MÉTODOS PÚBLICOS
-    
+
     // Inserta un avión en el árbol
     void insertar(Avion *avion)
     {
@@ -570,31 +574,24 @@ public:
     string generarDOT()
     {
         string dot = "digraph ArbolB {\n";
-        dot += "    node [shape=record];\n";
+        dot += "    node [shape=record, style=filled, fillcolor=lightcyan];\n";
+        dot += "    edge [arrowhead=vee];\n";
         dot += "    rankdir=TB;\n\n";
 
         if (raiz == nullptr)
         {
-            dot += "    vacio [label=\"Árbol Vacío\" shape=box style=filled fillcolor=lightgray];\n";
+            dot += "    vacio [label=\"Árbol B Vacío\", shape=box, fillcolor=lightgray];\n";
         }
         else
         {
-            ofstream temp("temp_arbolb.dot");
-            temp << dot;
             int contador = 0;
-            generarDOTRecursivo(raiz, temp, contador);
-            temp.close();
+            generarDOTRecursivo(raiz, dot, contador);
 
-            ifstream leer("temp_arbolb.dot");
-            string linea;
-            dot = "";
-            while (getline(leer, linea))
-            {
-                dot += linea + "\n";
-            }
-            leer.close();
+            // Añadir los datos de los aviones como tooltips
+            dot += "\n    // ===== DATOS DE AVIONES =====\n";
         }
 
+        dot += "\n    titulo [label=\"Árbol B - Aviones Disponibles\", shape=plaintext, fontsize=16];\n";
         dot += "}\n";
         return dot;
     }

@@ -31,7 +31,7 @@ void limpiarPantalla()
 #endif
 }
 
-// DAR DE BAJA A UN PILOTO 
+// DAR DE BAJA A UN PILOTO
 void darDeBajaPiloto(ArbolBinarioBusqueda *arbolPilotos,
                      TablaHash *tablaPilotos,
                      MatrizDispersa *matriz)
@@ -133,7 +133,6 @@ void cargarMovimientos(ArbolB *arbolDisponibles,
                        TablaHash *tablaPilotos,
                        MatrizDispersa *matriz)
 {
-
     cout << "       CARGAR MOVIMIENTOS" << endl;
     cout << "" << endl;
 
@@ -158,70 +157,51 @@ void cargarMovimientos(ArbolB *arbolDisponibles,
 
     while (getline(archivoTXT, linea))
     {
-        // Ignorar líneas vacías
         if (linea.empty())
-        {
             continue;
-        }
-
-        // Eliminar punto y coma final
-        if (!linea.empty() && linea.back() == ';')
-        {
-            linea.pop_back();
-        }
 
         contador++;
         cout << "\n[" << contador << "] " << linea << endl;
 
-        // Parsear comando
-        size_t pos = linea.find('(');
-        if (pos == string::npos)
+        //  MantenimientoAviones,Ingreso,N70014;
+        if (linea.find("MantenimientoAviones,Ingreso,") == 0)
         {
-            cout << "  Formato inválido" << endl;
-            continue;
+            string registro = linea.substr(29); // "MantenimientoAviones,Ingreso," son 30 chars
+            if (!registro.empty() && registro.back() == ';')
+                registro.pop_back();
+            moverAvion(arbolDisponibles, listaMantenimiento, "Ingreso", registro);
         }
-
-        string comando = linea.substr(0, pos);
-        string parametros = linea.substr(pos + 1);
-
-        // Eliminar paréntesis final
-        if (!parametros.empty() && parametros.back() == ')')
+        //  MantenimientoAviones,Salida,N70015;
+        else if (linea.find("MantenimientoAviones,Salida,") == 0)
         {
-            parametros.pop_back();
+            string registro = linea.substr(28); // "MantenimientoAviones,Salida," son 29 chars
+            if (!registro.empty() && registro.back() == ';')
+                registro.pop_back();
+            moverAvion(arbolDisponibles, listaMantenimiento, "Salida", registro);
         }
-
-        // Procesar comandos
-        if (comando == "MantenimientoAviones")
+        // DarDeBaja(X07000123);
+        else if (linea.find("DarDeBaja(") == 0)
         {
-            // Formato: MantenimientoAviones(Ingreso,N12345) o (Salida,N12345)
-            size_t coma = parametros.find(',');
-            if (coma != string::npos)
+            size_t inicio = 10; // "DarDeBaja(" son 10 chars
+            size_t fin = linea.find(')');
+            if (fin != string::npos)
             {
-                string tipo = parametros.substr(0, coma);
-                string registro = parametros.substr(coma + 1);
+                string idPiloto = linea.substr(inicio, fin - inicio);
+                cout << "  Dando de baja a piloto: " << idPiloto << endl;
 
-                moverAvion(arbolDisponibles, listaMantenimiento, tipo, registro);
-            }
-        }
-        else if (comando == "DarDeBaja")
-        {
-            // Formato: DarDeBaja(P001)
-            string idPiloto = parametros;
+                bool exito1 = arbolPilotos->eliminar(idPiloto);
+                bool exito2 = tablaPilotos->eliminar(idPiloto);
+                bool exito3 = matriz->eliminarPiloto(idPiloto);
 
-            cout << "  Dando de baja a piloto: " << idPiloto << endl;
-
-            bool exito1 = arbolPilotos->eliminar(idPiloto);
-            bool exito2 = tablaPilotos->eliminar(idPiloto);
-            bool exito3 = matriz->eliminarPiloto(idPiloto);
-
-            if (exito1 && exito2)
-            {
-                cout << "  Piloto dado de baja exitosamente" << endl;
+                if (exito1 && exito2)
+                {
+                    cout << "  Piloto dado de baja exitosamente" << endl;
+                }
             }
         }
         else
         {
-            cout << "  Comando desconocido: " << comando << endl;
+            cout << "  Formato no reconocido" << endl;
         }
     }
 
@@ -458,7 +438,7 @@ int main()
                 cout << "Nombre del archivo: ";
                 getline(cin, archivo);
 
-                GestorArchivos::cargarAvionesArbolB(archivo, arbolDisponibles, listaMantenimiento);
+                GestorArchivos::cargarAvionesArbolB(archivo, arbolDisponibles, listaMantenimiento, matriz);
                 pausar();
             }
             break;
@@ -475,7 +455,7 @@ int main()
                 cout << "Nombre del archivo: ";
                 getline(cin, archivo);
 
-                GestorArchivos::cargarPilotos(archivo, arbolPilotos, tablaPilotos);
+                GestorArchivos::cargarPilotos(archivo, arbolPilotos, tablaPilotos, matriz);
                 pausar();
             }
             break;

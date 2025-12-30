@@ -9,6 +9,25 @@ using namespace std;
 
 class MatrizDispersa
 {
+
+public:
+    int getNumAsignaciones()
+    {
+        int contador = 0;
+        CabeceraFila *fila = primeraFila;
+        while (fila != nullptr)
+        {
+            NodoMatriz *nodo = fila->primero;
+            while (nodo != nullptr)
+            {
+                contador++;
+                nodo = nodo->derecha;
+            }
+            fila = fila->siguiente;
+        }
+        return contador;
+    }
+
 private:
     CabeceraFila *primeraFila;       // Lista de cabeceras de filas (pilotos)
     CabeceraColumna *primeraColumna; // Lista de cabeceras de columnas (ciudades)
@@ -447,118 +466,119 @@ public:
 
         archivo << "digraph MatrizDispersa {" << endl;
         archivo << "    rankdir=TB;" << endl;
-        archivo << "    node [shape=box];" << endl;
+        archivo << "    node [shape=box, style=filled];" << endl;
+        archivo << "    edge [arrowhead=vee];" << endl;
+        archivo << "    graph [nodesep=0.5, ranksep=0.8];" << endl;
         archivo << endl;
 
-        // Nodo raíz
-        archivo << "    raiz [label=\"Raíz\", style=filled, fillcolor=yellow];" << endl;
+        // NODO RAÍZ
+        archivo << "    raiz [label=\"Matriz Dispersa - Vuelos y Ciudades\", ";
+        archivo << "shape=ellipse, fillcolor=gold, fontsize=16];" << endl;
+        archivo << endl;
 
-        // Cabeceras de columnas
+        // ===== CIUDADES (en la parte superior) =====
+        archivo << "    // ===== CIUDADES ===== " << endl;
         CabeceraColumna *col = primeraColumna;
         while (col != nullptr)
         {
-            archivo << "    col" << col->indiceColumna
-                    << " [label=\"" << col->ciudad
-                    << "\", style=filled, fillcolor=lightblue];" << endl;
+            archivo << "    ciudad_" << col->indiceColumna << " [label=\"" << col->ciudad << "\", ";
+            archivo << "fillcolor=lightgreen];" << endl;
+            archivo << "    raiz -> ciudad_" << col->indiceColumna << " [style=dashed];" << endl;
             col = col->siguiente;
         }
+        archivo << endl;
 
-        // Cabeceras de filas
+        // ===== VUELOS (en el medio) =====
+        archivo << "    // ===== VUELOS ===== " << endl;
         CabeceraFila *fila = primeraFila;
         while (fila != nullptr)
         {
-            archivo << "    fila" << fila->indiceFila
-                    << " [label=\"" << fila->idPiloto
-                    << "\", style=filled, fillcolor=lightgreen];" << endl;
+            NodoMatriz *nodo = fila->primero;
+            while (nodo != nullptr)
+            {
+                archivo << "    vuelo_" << nodo->fila << "_" << nodo->columna << " [label=\"" << nodo->vuelo << "\", ";
+                archivo << "fillcolor=lightblue, shape=circle];" << endl;
+
+                // Conectar vuelo a ciudad
+                archivo << "    vuelo_" << nodo->fila << "_" << nodo->columna << " -> ciudad_" << nodo->columna << ";" << endl;
+
+                nodo = nodo->derecha;
+            }
             fila = fila->siguiente;
         }
+        archivo << endl;
 
-        // Nodos internos
+        // ===== PILOTOS (en la parte inferior) =====
+        archivo << "    // ===== PILOTOS ===== " << endl;
+        fila = primeraFila;
+        while (fila != nullptr)
+        {
+            archivo << "    piloto_" << fila->indiceFila << " [label=\"" << fila->idPiloto << "\", ";
+            archivo << "fillcolor=lightpink];" << endl;
+
+            // Conectar piloto a sus vuelos
+            NodoMatriz *nodo = fila->primero;
+            while (nodo != nullptr)
+            {
+                archivo << "    piloto_" << nodo->fila << " -> vuelo_" << nodo->fila << "_" << nodo->columna << ";" << endl;
+                nodo = nodo->derecha;
+            }
+
+            fila = fila->siguiente;
+        }
+        archivo << endl;
+
+        // ===== FORZAR ORDEN VERTICAL =====
+        archivo << "    // ===== FORZAR ORDEN ===== " << endl;
+        archivo << "    { rank=same; raiz; }" << endl;
+
+        // Ciudades en el mismo nivel (arriba)
+        archivo << "    { rank=same; ";
+        col = primeraColumna;
+        while (col != nullptr)
+        {
+            archivo << "ciudad_" << col->indiceColumna << "; ";
+            col = col->siguiente;
+        }
+        archivo << "}" << endl;
+
+        // Vuelos en el medio
+        // Nota: Esto es más complicado porque los vuelos están en diferentes filas y columnas.
+        // Vamos a agrupar todos los vuelos en un mismo nivel.
+        archivo << "    { rank=same; ";
         fila = primeraFila;
         while (fila != nullptr)
         {
             NodoMatriz *nodo = fila->primero;
             while (nodo != nullptr)
             {
-                archivo << "    nodo" << nodo->fila << "_" << nodo->columna
-                        << " [label=\"" << nodo->vuelo << "\", style=filled, fillcolor=lightyellow];" << endl;
+                archivo << "vuelo_" << nodo->fila << "_" << nodo->columna << "; ";
                 nodo = nodo->derecha;
             }
             fila = fila->siguiente;
         }
+        archivo << "}" << endl;
 
-        archivo << endl;
-
-        // Conexiones desde raíz a columnas
-        col = primeraColumna;
-        while (col != nullptr)
-        {
-            archivo << "    raiz -> col" << col->indiceColumna << ";" << endl;
-            col = col->siguiente;
-        }
-
-        // Conexiones desde raíz a filas
+        // Pilotos en el mismo nivel (abajo)
+        archivo << "    { rank=same; ";
         fila = primeraFila;
         while (fila != nullptr)
         {
-            archivo << "    raiz -> fila" << fila->indiceFila << ";" << endl;
+            archivo << "piloto_" << fila->indiceFila << "; ";
             fila = fila->siguiente;
         }
-
-        // Conexiones horizontales y verticales
-        fila = primeraFila;
-        while (fila != nullptr)
-        {
-            // Desde cabecera de fila al primer nodo
-            if (fila->primero != nullptr)
-            {
-                archivo << "    fila" << fila->indiceFila << " -> nodo"
-                        << fila->primero->fila << "_" << fila->primero->columna << ";" << endl;
-
-                // Entre nodos de la misma fila
-                NodoMatriz *nodo = fila->primero;
-                while (nodo != nullptr && nodo->derecha != nullptr)
-                {
-                    archivo << "    nodo" << nodo->fila << "_" << nodo->columna
-                            << " -> nodo" << nodo->derecha->fila << "_" << nodo->derecha->columna
-                            << ";" << endl;
-                    nodo = nodo->derecha;
-                }
-            }
-            fila = fila->siguiente;
-        }
-
-        // Conexiones verticales
-        col = primeraColumna;
-        while (col != nullptr)
-        {
-            if (col->primero != nullptr)
-            {
-                archivo << "    col" << col->indiceColumna << " -> nodo"
-                        << col->primero->fila << "_" << col->primero->columna << ";" << endl;
-
-                NodoMatriz *nodo = col->primero;
-                while (nodo != nullptr && nodo->abajo != nullptr)
-                {
-                    archivo << "    nodo" << nodo->fila << "_" << nodo->columna
-                            << " -> nodo" << nodo->abajo->fila << "_" << nodo->abajo->columna
-                            << ";" << endl;
-                    nodo = nodo->abajo;
-                }
-            }
-            col = col->siguiente;
-        }
+        archivo << "}" << endl;
 
         archivo << "}" << endl;
         archivo.close();
 
-        system("dot -Tpng grafica_matriz_dispersa.dot -o grafica_matriz_dispersa.png");
+        system("dot -Tpng grafica_matriz_dispersa.dot -o grafica_matriz_dispersa.png 2>nul");
 
 #ifdef _WIN32
         system("start grafica_matriz_dispersa.png");
 #endif
 
-        cout << " Reporte generado: grafica_matriz_dispersa.png" << endl;
+        cout << "   Reporte de matriz generado" << endl;
     }
 };
 
